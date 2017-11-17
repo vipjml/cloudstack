@@ -68,6 +68,7 @@ EOF
 
 function configure_login() {
   # configure_sshd
+  systemctl enable sshd
   configure_inittab
   add_admin_group
   configure_sudoers
