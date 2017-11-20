@@ -129,6 +129,7 @@ function configure_services() {
   mkdir -p /var/cache/cloud
   mkdir -p /usr/share/cloud
   mkdir -p /usr/local/cloud
+  mkdir -p /opt/tftpboot
 
   # Fix haproxy directory issue
   mkdir -p /var/lib/haproxy
