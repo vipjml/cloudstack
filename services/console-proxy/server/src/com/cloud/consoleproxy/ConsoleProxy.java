@@ -26,14 +26,11 @@ import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.util.Hashtable;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.xml.DOMConfigurator;
 
 import com.cloud.consoleproxy.util.Logger;
@@ -74,25 +71,11 @@ public class ConsoleProxy {
     static String factoryClzName;
     static boolean standaloneStart = false;
 
-    static String encryptorPassword = genDefaultEncryptorPassword();
-
-    private static String genDefaultEncryptorPassword() {
-        try {
-            SecureRandom random = SecureRandom.getInstance("SHA1PRNG");
-
-            byte[] randomBytes = new byte[16];
-            random.nextBytes(randomBytes);
-            return Base64.encodeBase64String(randomBytes);
-        } catch (NoSuchAlgorithmException e) {
-            s_logger.error("Unexpected exception ", e);
-            assert (false);
-        }
-
-        return "Dummy";
-    }
+    static String encryptorPassword = "Dummy";
 
     private static void configLog4j() {
-        URL configUrl = System.class.getResource("/conf/log4j-cloud.xml");
+        final ClassLoader loader = ReflectUtil.getClassLoaderForName("conf");
+        URL configUrl = loader.getResource("/conf/log4j-cloud.xml");
         if (configUrl == null)
             configUrl = ClassLoader.getSystemResource("log4j-cloud.xml");
 
@@ -250,6 +233,7 @@ public class ConsoleProxy {
     }
 
     public static void startWithContext(Properties conf, Object context, byte[] ksBits, String ksPassword, String password) {
+        setEncryptorPassword(password);
         configLog4j();
         Logger.setFactory(new ConsoleProxyLoggerFactory());
         s_logger.info("Start console proxy with context");
@@ -260,14 +244,12 @@ public class ConsoleProxy {
             }
         }
 
-        encryptorPassword = password;
-
         // Using reflection to setup private/secure communication channel towards management server
         ConsoleProxy.context = context;
         ConsoleProxy.ksBits = ksBits;
         ConsoleProxy.ksPassword = ksPassword;
         try {
-            final ClassLoader loader = ReflectUtil.getClassLoaderForJar("agent");
+            final ClassLoader loader = ReflectUtil.getClassLoaderForName("agent");
             Class<?> contextClazz = loader.loadClass("com.cloud.agent.resource.consoleproxy.ConsoleProxyResource");
             authMethod = contextClazz.getDeclaredMethod("authenticateConsoleAccess", String.class, String.class, String.class, String.class, String.class, Boolean.class);
             reportMethod = contextClazz.getDeclaredMethod("reportLoadInfo", String.class);

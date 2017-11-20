@@ -217,7 +217,7 @@ public class ReflectUtil {
      * @param name
      * @return returns ClassLoader
      */
-    public static ClassLoader getClassLoaderForJar(final String name) {
+    public static ClassLoader getClassLoaderForName(final String name) {
         final URL[] urls = ((URLClassLoader) (Thread.currentThread().getContextClassLoader())).getURLs();
         final List<URL> searchUrls = new ArrayList<>();
         for (final URL url: urls) {

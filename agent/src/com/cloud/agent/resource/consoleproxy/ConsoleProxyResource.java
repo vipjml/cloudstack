@@ -317,9 +317,9 @@ public class ConsoleProxyResource extends ServerResourceBase implements ServerRe
     private void launchConsoleProxy(final byte[] ksBits, final String ksPassword, final String encryptorPassword) {
         final Object resource = this;
         s_logger.info("Building class loader for com.cloud.consoleproxy.ConsoleProxy");
-        final ClassLoader loader = ReflectUtil.getClassLoaderForJar("console-proxy");
+        final ClassLoader loader = ReflectUtil.getClassLoaderForName("console-proxy");
         if (_consoleProxyMain == null) {
-            s_logger.info("Running com.cloud.consoleproxy.ConsoleProxy");
+            s_logger.info("Running com.cloud.consoleproxy.ConsoleProxy with encryptor password=" + encryptorPassword);
             _consoleProxyMain = new Thread(new ManagedContextRunnable() {
                 @Override
                 protected void runInContext() {
@@ -438,6 +438,11 @@ public class ConsoleProxyResource extends ServerResourceBase implements ServerRe
                 }
             }
         }
+    }
+
+    @Override
+    public boolean stop() {
+        return true;
     }
 
     @Override
