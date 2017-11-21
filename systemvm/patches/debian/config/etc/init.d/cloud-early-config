@@ -587,7 +587,7 @@ setup_common() {
    
   echo $NAME > /etc/hostname
   echo 'AVAHI_DAEMON_DETECT_LOCAL=0' > /etc/default/avahi-daemon
-  hostname $NAME
+  hostnamectl set-hostname $NAME
   
   #Nameserver
   sed -i -e "/^nameserver.*$/d" /etc/resolv.conf # remove previous entries
@@ -967,7 +967,7 @@ EOF
    
   echo $NAME > /etc/hostname
   echo 'AVAHI_DAEMON_DETECT_LOCAL=0' > /etc/default/avahi-daemon
-  hostname $NAME
+  hostnamectl set-hostname $NAME
   
   #Nameserver
   sed -i -e "/^nameserver.*$/d" /etc/resolv.conf # remove previous entries
