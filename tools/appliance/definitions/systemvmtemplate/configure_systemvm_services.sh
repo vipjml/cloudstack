@@ -155,7 +155,7 @@ function configure_services() {
   # Hyperv kvp daemon - 64bit only
   local arch=`dpkg --print-architecture`
   if [ "${arch}" == "amd64" ]; then
-    systemctl disable hv_kvp_daemon
+    #systemctl disable hyperv-daemons
   fi
   systemctl disable radvd
 
