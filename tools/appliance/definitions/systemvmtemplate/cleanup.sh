@@ -41,8 +41,8 @@ function cleanup_dev() {
 
 function cleanup_misc() {
   rm -fr /var/log/*
+  rm -fr /home/cloud/cloud_scripts*
   rm -f /root/.rnd
-  rm -f /home/cloud/cloud_scripts*
   rm -f /var/www/html/index.html
 }
 
