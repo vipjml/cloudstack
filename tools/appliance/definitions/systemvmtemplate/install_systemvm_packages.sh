@@ -75,22 +75,19 @@ function install_packages() {
     haproxy \
     radvd \
     sharutils \
-    keepalived irqbalance open-vm-tools qemu-guest-agent \
+    keepalived irqbalance open-vm-tools qemu-guest-agent hyperv-daemons \
     strongswan libcharon-extra-plugins libstrongswan-extra-plugins
+
+  # Install xenserver guest utilities as debian repos don't have it
+  wget https://mirrors.kernel.org/ubuntu/pool/universe/x/xe-guest-utilities/xe-guest-utilities_7.4.0-0ubuntu1_amd64.deb
+  dpkg -i xe-guest-utilities_7.4.0-0ubuntu1_amd64.deb
+  rm -f xe-guest-utilities_7.4.0-0ubuntu1_amd64.deb
 
   apt-get autoclean
   apt-get clean
 
   apt-get update
   apt-get -y upgrade
-
-  if [ "${arch}" == "amd64" ]; then
-    # Hyperv  kvp daemon - 64bit only
-    # Download the hv kvp daemon
-    wget http://people.apache.org/~rajeshbattala/hv-kvp-daemon_3.1_amd64.deb
-    dpkg -i hv-kvp-daemon_3.1_amd64.deb
-    rm -f hv-kvp-daemon_3.1_amd64.deb
-  fi
 }
 
 return 2>/dev/null || install_packages
