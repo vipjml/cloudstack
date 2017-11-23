@@ -16,15 +16,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
-
-#run.sh runs the console proxy.
+# run.sh runs the cloud service
+#set -x
 
 # make sure we delete the old files from the original template
 rm -f console-proxy.jar
 rm -f console-common.jar
 rm -f conf/cloud.properties
 
-#set -x
 
 CP="./:./conf:$(ls *.jar | tr '\n' ':' | sed s'/.$//')"
 
