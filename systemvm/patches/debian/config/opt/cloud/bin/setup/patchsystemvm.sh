@@ -18,6 +18,7 @@
 
 #set -x
 logfile="/var/log/patchsystemvm.log"
+
 # To use existing console proxy .zip-based package file
 patch_console_proxy() {
    local patchfile=$1
@@ -158,25 +159,11 @@ enable_serial_console() {
    sed -i -e "/6:23:respawn/a\s0:2345:respawn:/sbin/getty -L 115200 ttyS0 vt102" /etc/inittab
 }
 
-
-CMDLINE=$(cat /var/cache/cloud/cmdline)
-TYPE="router"
 PATCH_MOUNT=$1
 Hypervisor=$2
+TYPE=$3
 
-for i in $CMDLINE
-  do
-    # search for foo=bar pattern and cut out foo
-    KEY=$(echo $i | cut -d= -f1)
-    VALUE=$(echo $i | cut -d= -f2)
-    case $KEY in
-      type)
-        TYPE=$VALUE
-        ;;
-      *)
-        ;;
-    esac
-done
+echo "" > /root/.ssh/known_hosts
 
 if [ "$TYPE" == "consoleproxy" ] || [ "$TYPE" == "secstorage" ]  && [ -f ${PATCH_MOUNT}/systemvm.zip ]
 then
@@ -188,9 +175,6 @@ then
   fi
 fi
 
-
-#empty known hosts
-echo "" > /root/.ssh/known_hosts
 
 if [ "$Hypervisor" == "kvm" ]
 then
