@@ -152,11 +152,6 @@ function configure_services() {
   systemctl disable dnsmasq
   systemctl disable strongswan
 
-  # Hyperv kvp daemon - 64bit only
-  local arch=`dpkg --print-architecture`
-  if [ "${arch}" == "amd64" ]; then
-    #systemctl disable hyperv-daemons
-  fi
   systemctl disable radvd
 
   configure_apache2
