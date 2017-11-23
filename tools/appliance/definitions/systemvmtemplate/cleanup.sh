@@ -44,6 +44,7 @@ function cleanup_misc() {
   rm -fr /var/log/installer
   rm -f /root/.rnd
   rm -f /home/cloud/cloud_scripts*
+  rm -f /var/www/html/index.html
 }
 
 function cleanup() {

@@ -17,23 +17,17 @@
 # under the License.
 
 
-
- 
-
 #run.sh runs the console proxy.
 
-# make sure we delete the old files from the original template 
-rm console-proxy.jar
-rm console-common.jar
-rm conf/cloud.properties
+# make sure we delete the old files from the original template
+rm -f console-proxy.jar
+rm -f console-common.jar
+rm -f conf/cloud.properties
 
-set -x
+#set -x
 
-CP=./:./conf
-for file in *.jar
-do
-  CP=${CP}:$file
-done
+CP="./:./conf:$(ls *.jar | tr '\n' ':' | sed s'/.$//')"
+
 keyvalues=
 LOGHOME=/var/log/cloud/
 
@@ -50,7 +44,7 @@ for i in $CMDLINE
           keyvalues="${keyvalues} $KEY=$VALUE"
      esac
   done
-   
+
 tot_mem_k=$(cat /proc/meminfo | grep MemTotal | awk '{print $2}')
 let "tot_mem_m=tot_mem_k>>10"
 let "eightypcnt=$tot_mem_m*8/10"

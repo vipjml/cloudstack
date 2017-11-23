@@ -140,6 +140,8 @@ function configure_services() {
   do_signature
 
   systemctl daemon-reload
+  systemctl disable apt-daily.service
+  systemctl disable apt-daily.timer
   systemctl disable xl2tpd
 
   # Disable services that slow down boot and are not used anyway
@@ -148,6 +150,7 @@ function configure_services() {
   systemctl disable haproxy
   systemctl disable apache2
   systemctl disable dnsmasq
+  systemctl disable strongswan
 
   # Hyperv kvp daemon - 64bit only
   local arch=`dpkg --print-architecture`
