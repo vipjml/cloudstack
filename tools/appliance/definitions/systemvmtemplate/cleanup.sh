@@ -39,10 +39,18 @@ function cleanup_dev() {
   rm -f /lib/udev/rules.d/75-persistent-net-generator.rules
 }
 
+function cleanup_misc() {
+  rm -f /var/log/*
+  rm -fr /var/log/installer
+  rm -f /root/.rnd
+  rm -f /home/cloud/cloud_scripts*
+}
+
 function cleanup() {
   cleanup_apt
   cleanup_dhcp
   cleanup_dev
+  cleanup_misc
 }
 
 return 2>/dev/null || cleanup

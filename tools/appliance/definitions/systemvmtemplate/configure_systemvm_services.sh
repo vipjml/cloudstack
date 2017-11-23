@@ -129,6 +129,8 @@ function configure_services() {
   mkdir -p /var/cache/cloud
   mkdir -p /usr/share/cloud
   mkdir -p /usr/local/cloud
+
+  # Fix dnsmasq directory issue
   mkdir -p /opt/tftpboot
 
   # Fix haproxy directory issue

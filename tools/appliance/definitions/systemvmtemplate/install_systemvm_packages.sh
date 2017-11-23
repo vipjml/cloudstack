@@ -54,7 +54,7 @@ function install_packages() {
 
   ${apt_get} install \
     rsyslog logrotate cron insserv net-tools ifupdown vim netbase iptables \
-    openssh-server e2fsprogs isc-dhcp-client tcpdump socat wget \
+    openssh-server e2fsprogs tcpdump socat wget \
     python bzip2 sed gawk diffutils grep gzip less tar telnet ftp rsync traceroute psmisc lsof procps \
     inetutils-ping iputils-arping httping  curl \
     dnsutils zip unzip ethtool uuid file iproute acpid virt-what sudo \
