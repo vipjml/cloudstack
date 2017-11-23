@@ -132,6 +132,183 @@ get_boot_params() {
 }
 
 
+parse_cmd_line() {
+  CMDLINE=$(cat /var/cache/cloud/cmdline)
+  TYPE="unknown"
+  BOOTPROTO="static"
+  DISABLE_RP_FILTER="false"
+  STORAGE_IP=""
+  STORAGE_NETMASK=""
+  STORAGE_CIDR=""
+  VM_PASSWORD=""
+
+  CHEF_TMP_FILE=/tmp/cmdline.json
+  COMMA="\t"
+  echo -e "{\n\"type\": \"cmdline\"," > ${CHEF_TMP_FILE}
+  echo -e "\n\"cmd_line\": {" >> ${CHEF_TMP_FILE}
+
+  for i in $CMDLINE
+    do
+      # search for foo=bar pattern and cut out foo
+      KEY=$(echo $i | cut -d= -f1)
+      VALUE=$(echo $i | cut -d= -f2)
+      echo -en ${COMMA} >> ${CHEF_TMP_FILE}
+      # Two lines so values do not accidently interpretted as escapes!!
+      echo -n \"${KEY}\"': '\"${VALUE}\" >> ${CHEF_TMP_FILE}
+      COMMA=",\n\t"
+      case $KEY in
+        disable_rp_filter)
+            export DISABLE_RP_FILTER=$VALUE
+            ;;
+        eth0ip)
+            export ETH0_IP=$VALUE
+            ;;
+        eth1ip)
+            export ETH1_IP=$VALUE
+            ;;
+        eth2ip)
+            export ETH2_IP=$VALUE
+            ;;
+        host)
+            export MGMT_HOST=$VALUE
+            ;;
+        gateway)
+            export GW=$VALUE
+            ;;
+        ip6gateway)
+            export IP6GW=$VALUE
+            ;;
+        eth0mask)
+            export ETH0_MASK=$VALUE
+            ;;
+        eth1mask)
+            export ETH1_MASK=$VALUE
+            ;;
+        eth2mask)
+            export ETH2_MASK=$VALUE
+            ;;
+        eth0ip6)
+            export ETH0_IP6=$VALUE
+            ;;
+        eth0ip6prelen)
+            export ETH0_IP6_PRELEN=$VALUE
+            ;;
+        internaldns1)
+            export internalNS1=$VALUE
+            ;;
+        internaldns2)
+            export internalNS2=$VALUE
+            ;;
+        dns1)
+            export NS1=$VALUE
+            ;;
+        dns2)
+            export NS2=$VALUE
+            ;;
+        ip6dns1)
+            export IP6_NS1=$VALUE
+            ;;
+        ip6dns2)
+            export IP6_NS2=$VALUE
+            ;;
+        domain)
+            export DOMAIN=$VALUE
+            ;;
+        dnssearchorder)
+            export DNS_SEARCH_ORDER=$VALUE
+            ;;
+        useextdns)
+            export USE_EXTERNAL_DNS=$VALUE
+            ;;
+        mgmtcidr)
+            export MGMTNET=$VALUE
+            ;;
+        localgw)
+            export LOCAL_GW=$VALUE
+            ;;
+        template)
+            export TEMPLATE=$VALUE
+            ;;
+        sshonguest)
+            export SSHONGUEST=$VALUE
+            ;;
+        name)
+            export NAME=$VALUE
+            ;;
+        dhcprange)
+            export DHCP_RANGE=$(echo $VALUE | tr ':' ',')
+            ;;
+        bootproto)
+            export BOOTPROTO=$VALUE
+            ;;
+        type)
+            export TYPE=$VALUE
+            ;;
+        defaultroute)
+            export DEFAULTROUTE=$VALUE
+            ;;
+        redundant_router)
+            export RROUTER=$VALUE
+            ;;
+        guestgw)
+            export GUEST_GW=$VALUE
+            ;;
+        guestbrd)
+            export GUEST_BRD=$VALUE
+            ;;
+        guestcidrsize)
+            export GUEST_CIDR_SIZE=$VALUE
+            ;;
+        router_pr)
+            export ROUTER_PR=$VALUE
+            ;;
+        extra_pubnics)
+            export EXTRA_PUBNICS=$VALUE
+            ;;
+        nic_macs)
+            export NIC_MACS=$VALUE
+            ;;
+        mtu)
+            export MTU=$VALUE
+            ;;
+        storageip)
+            export STORAGE_IP=$VALUE
+            ;;
+        storagenetmask)
+            export STORAGE_NETMASK=$VALUE
+            ;;
+        storagecidr)
+            export STORAGE_CIDR=$VALUE
+            ;;
+        vmpassword)
+            export VM_PASSWORD=$VALUE
+            ;;
+        vpccidr)
+            export VPCCIDR=$VALUE
+            ;;
+        cidrsize)
+            export CIDR_SIZE=$VALUE
+            ;;
+        advert_int)
+            export ADVERT_INT=$VALUE
+            ;;
+        ntpserverlist)
+            export NTP_SERVER_LIST=$VALUE
+            ;;
+      esac
+  done
+  echo -e "\n\t}\n}" >> ${CHEF_TMP_FILE}
+  if [ "$TYPE" != "unknown" ]
+  then
+    mv ${CHEF_TMP_FILE} /var/cache/cloud/cmd_line.json
+  fi
+
+  [ $ETH0_IP ] && export LOCAL_ADDRS=$ETH0_IP
+  [ $ETH0_IP6 ] && export LOCAL_ADDRS=$ETH0_IP6
+  [ $ETH0_IP ] && [ $ETH0_IP6 ] && export LOCAL_ADDRS="$ETH0_IP,$ETH0_IP6"
+}
+
+
 patch() {
   local PATCH_MOUNT=/media/cdrom
   local patchfile=$PATCH_MOUNT/cloud-scripts.tgz
@@ -178,11 +355,22 @@ patch() {
 
   if [ -f /mnt/cmdline ]; then
     cat /mnt/cmdline > /var/cache/cloud/cmdline
+    parse_cmd_line
   fi
 
   return 0
 }
 
+
+change_password() {
+  # Randomize cloud password so only ssh login is allowed
+  echo "cloud:`openssl rand -base64 32`" | chpasswd
+
+  if [ x"$VM_PASSWORD" != x"" ]
+  then
+    echo "root:$VM_PASSWORD" | chpasswd
+  fi
+}
 
 
 start() {
@@ -196,7 +384,9 @@ start() {
 
   config_guest
   get_boot_params
+  parse_cmd_line
   patch
+  change_password
 
   if [ -f "/opt/cloud/bin/setup/$TYPE.sh" ]; then
       /opt/cloud/bin/setup/$TYPE.sh
