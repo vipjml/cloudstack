@@ -24,6 +24,8 @@ secstorage_svcs() {
    systemctl disable --now dnsmasq
    systemctl disable --now haproxy
    systemctl disable --now keepalived
+   systemctl enable apache2
+   systemctl enable cloud
    systemctl enable nfs-common
    systemctl enable portmap
    systemctl enable postinit
@@ -36,13 +38,13 @@ secstorage_svcs() {
 setup_secstorage() {
   log_it "Setting up secondary storage system vm"
   sysctl vm.min_free_kbytes=8192
-  local hyp=$HYPERVISOR
+
   setup_common eth0 eth1 eth2
   setup_storage_network
   setup_system_rfc1918_internal
 
   log_it "Setting up entry in hosts"
-  sed -i  /gateway/d /etc/hosts
+  sed -i /$NAME/d /etc/hosts
   public_ip=`getPublicIp`
   echo "$public_ip $NAME" >> /etc/hosts
 
@@ -51,6 +53,7 @@ setup_secstorage() {
   cp /etc/iptables/iptables-secstorage /etc/iptables/rules
 
   log_it "Configuring sshd"
+  local hyp=$HYPERVISOR
   if [ "$hyp" == "vmware" ] || [ "$hyp" == "hyperv" ]; then
     setup_sshd $ETH1_IP "eth1"
   else
@@ -84,11 +87,10 @@ CORS
 
   disable_rpfilter
   enable_fwding 0
-
-  systemctl enable cloud apache2
   enable_irqbalance 0
-  rm -f /etc/logrotate.d/cloud
   setup_ntp
+
+  rm -f /etc/logrotate.d/cloud
 }
 
 secstorage_svcs

@@ -24,17 +24,16 @@ elbvm_svcs() {
    systemctl disable --now keepalived
    systemctl disable --now nfs-common
    systemctl disable --now portmap
-   systemctl enable --now haproxy
-   systemctl enable --now ssh
+   systemctl enable haproxy
+   systemctl enable ssh
    echo "ssh haproxy" > /var/cache/cloud/enabled_svcs
    echo "cloud dnsmasq cloud-passwd-srvr apache2 nfs-common portmap" > /var/cache/cloud/disabled_svcs
 }
 
 setup_elbvm() {
   log_it "Setting up Elastic Load Balancer system vm"
-  local hyp=$HYPERVISOR
   setup_common eth0 eth1
-  sed -i  /gateway/d /etc/hosts
+  sed -i  /$NAME/d /etc/hosts
   public_ip=$ETH2_IP
   [ "$ETH2_IP" == "0.0.0.0" ] || [ "$ETH2_IP" == "" ] && public_ip=$ETH0_IP
   echo "$public_ip $NAME" >> /etc/hosts
@@ -50,14 +49,12 @@ setup_elbvm() {
 
   enable_fwding 0
   enable_irqbalance 0
-  systemctl disable nfs-common
-  systemctl disable portmap
 }
 
-setup_elbvm
 elbvm_svcs
 if [ $? -gt 0 ]
 then
   log_it "Failed to execute elbvm svcs"
   exit 1
 fi
+setup_elbvm

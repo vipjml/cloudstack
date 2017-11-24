@@ -25,9 +25,10 @@ dhcpsrvr_svcs() {
    systemctl disable --now keepalived
    systemctl disable --now nfs-common
    systemctl disable --now portmap
-   systemctl enable --now cloud-passwd-srvr
-   systemctl enable --now dnsmasq
-   systemctl enable --now ssh
+   systemctl enable apache2
+   systemctl enable cloud-passwd-srvr
+   systemctl enable dnsmasq
+   systemctl enable ssh
    echo "ssh dnsmasq cloud-passwd-srvr apache2" > /var/cache/cloud/enabled_svcs
    echo "cloud nfs-common haproxy portmap" > /var/cache/cloud/disabled_svcs
 }
@@ -38,15 +39,12 @@ setup_dhcpsrvr() {
   setup_dnsmasq
   setup_apache2 $ETH0_IP
 
-  sed -i  /gateway/d /etc/hosts
+  sed -i  /$NAME/d /etc/hosts
   [ $ETH0_IP ] && echo "$ETH0_IP $NAME" >> /etc/hosts
   [ $ETH0_IP6 ] && echo "$ETH0_IP6 $NAME" >> /etc/hosts
 
-  systemctl enable dnsmasq cloud-passwd-srvr
-  systemctl restart dnsmasq cloud-passwd-srvr
   enable_irqbalance 0
   enable_fwding 0
-  systemctl disable nfs-common
 
   cp /etc/iptables/iptables-router /etc/iptables/rules.v4
   cp /etc/iptables/iptables-router /etc/iptables/rules
@@ -70,10 +68,10 @@ setup_dhcpsrvr() {
   fi
 }
 
-setup_dhcpsrvr
 dhcpsrvr_svcs
 if [ $? -gt 0 ]
 then
   log_it "Failed to execute dhcpsrvr_svcs"
   exit 1
 fi
+setup_dhcpsrvr

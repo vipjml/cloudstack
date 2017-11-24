@@ -24,15 +24,14 @@ ilbvm_svcs() {
    systemctl disable --now keepalived
    systemctl disable --now nfs-common
    systemctl disable --now portmap
-   systemctl enable --now haproxy
-   systemctl enable --now ssh
+   systemctl enable haproxy
+   systemctl enable ssh
    echo "ssh haproxy" > /var/cache/cloud/enabled_svcs
    echo "cloud dnsmasq cloud-passwd-srvr apache2 nfs-common portmap" > /var/cache/cloud/disabled_svcs
 }
 
 setup_ilbvm() {
   log_it "Setting up Internal Load Balancer system vm"
-  local hyp=$HYPERVISOR
   setup_common eth0 eth1
   #eth0 = guest network, eth1=control network
 
@@ -44,16 +43,13 @@ setup_ilbvm() {
   setup_sshd $ETH1_IP "eth1"
 
   enable_fwding 0
-  systemctl enable haproxy
   enable_irqbalance 1
-  systemctl disable nfs-common
-  systemctl disable portmap
 }
 
-setup_ilbvm
 ilbvm_svcs
 if [ $? -gt 0 ]
 then
   log_it "Failed to execute ilbvm svcs"
   exit 1
 fi
+setup_ilbvm

@@ -112,7 +112,8 @@ EOF
       echo 0 > /var/cache/cloud/dnsmasq_managed_lease
   fi
 
-  systemctl restart dnsmasq haproxy cloud-passwd-srvr
+  #FIXME: additional services to enable to vpc router?
+  #systemctl restart dnsmasq haproxy cloud-passwd-srvr
 
   #setup hourly logrotate
   mv -n /etc/cron.daily/logrotate /etc/cron.hourly 2>&1
@@ -122,10 +123,10 @@ EOF
   fi
 }
 
-setup_vpcrouter
 routing_svcs
 if [ $? -gt 0 ]
 then
   log_it "Failed to execute routing_svcs"
   exit 1
 fi
+setup_vpcrouter

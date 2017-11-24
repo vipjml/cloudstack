@@ -27,6 +27,7 @@ consoleproxy_svcs() {
    systemctl disable --now keepalived
    systemctl disable --now nfs-common
    systemctl disable --now portmap
+   systemctl enable cloud
    systemctl enable postinit
    systemctl enable ssh
    echo "cloud postinit ssh" > /var/cache/cloud/enabled_svcs
@@ -38,11 +39,17 @@ setup_console_proxy() {
   log_it "Setting up console proxy system vm"
   setup_common eth0 eth1 eth2
   setup_system_rfc1918_internal
+
+  log_it "Setting up entry in hosts"
+  sed -i /$NAME/d /etc/hosts
   public_ip=`getPublicIp`
-  sed -i  /gateway/d /etc/hosts
   echo "$public_ip $NAME" >> /etc/hosts
+
+  log_it "Applying iptables rules"
   cp /etc/iptables/iptables-consoleproxy /etc/iptables/rules.v4
   cp /etc/iptables/iptables-consoleproxy /etc/iptables/rules
+
+  log_it "Configuring sshd"
   local hyp=$HYPERVISOR
   if [ "$hyp" == "vmware" ] || [ "$hyp" == "hyperv" ]; then
     setup_sshd $ETH1_IP "eth1"
@@ -50,7 +57,6 @@ setup_console_proxy() {
     setup_sshd $ETH0_IP "eth0"
   fi
 
-  systemctl enable --now cloud
   disable_rpfilter
   enable_fwding 0
   enable_irqbalance 0

@@ -18,7 +18,6 @@
 
 . /opt/cloud/bin/setup/common.sh
 
-
 setup_router() {
   log_it "Setting up virtual router system vm"
 
@@ -55,7 +54,7 @@ setup_router() {
   #then
     #setup_redundant_router
   #fi
-  
+
   log_it "Checking udev NIC assignment order changes"
   if [ "$NIC_MACS" != "" ]
   then
@@ -63,7 +62,7 @@ setup_router() {
     newmd5=$(md5sum "/tmp/udev-rules" | awk '{print $1}')
     rm /tmp/interfaces
     rm /tmp/udev-rules
-    
+
     if [ "$oldmd5" != "$newmd5" ]
     then
       log_it "udev NIC assignment requires reboot to take effect"
@@ -72,24 +71,23 @@ setup_router() {
       reboot
     fi
   fi
-  
+
   setup_aesni
   setup_dnsmasq
   setup_apache2 $ETH0_IP
 
-  sed -i  /gateway/d /etc/hosts
+  sed -i /$NAME/d /etc/hosts
   echo "$ETH0_IP $NAME" >> /etc/hosts
 
-
   systemctl enable dnsmasq haproxy cloud-passwd-srvr
-  systemctl restart dnsmasq haproxy cloud-passwd-srvr
+
   enable_irqbalance 1
   disable_rpfilter_domR
   enable_fwding 1
   enable_rpsrfs 1
   systemctl disable nfs-common
   cp /etc/iptables/iptables-router /etc/iptables/rules.v4
-#for old templates
+  #for old templates
   cp /etc/iptables/iptables-router /etc/iptables/rules
   setup_sshd $ETH1_IP "eth1"
 
@@ -108,10 +106,10 @@ setup_router() {
   fi
 }
 
-setup_router
 routing_svcs
 if [ $? -gt 0 ]
 then
   log_it "Failed to execute routing_svcs"
   exit 1
 fi
+setup_router
