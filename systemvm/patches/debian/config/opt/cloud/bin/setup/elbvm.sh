@@ -18,6 +18,17 @@
 
 . /opt/cloud/bin/setup/common.sh
 
+elbvm_svcs() {
+   systemctl disable --now cloud
+   systemctl disable --now conntrackd
+   systemctl disable --now keepalived
+   systemctl disable --now nfs-common
+   systemctl disable --now portmap
+   systemctl enable --now haproxy
+   systemctl enable --now ssh
+   echo "ssh haproxy" > /var/cache/cloud/enabled_svcs
+   echo "cloud dnsmasq cloud-passwd-srvr apache2 nfs-common portmap" > /var/cache/cloud/disabled_svcs
+}
 
 setup_elbvm() {
   log_it "Setting up Elastic Load Balancer system vm"
@@ -44,3 +55,9 @@ setup_elbvm() {
 }
 
 setup_elbvm
+elbvm_svcs
+if [ $? -gt 0 ]
+then
+  log_it "Failed to execute elbvm svcs"
+  exit 1
+fi

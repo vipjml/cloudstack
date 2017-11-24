@@ -20,12 +20,10 @@ PATH="/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
 
 . /lib/lsb/init-functions
 
-
 log_it() {
   echo "$(date) $@" >> /var/log/cloud.log
   log_action_msg "$@"
 }
-
 
 init_interfaces_orderby_macs() {
     macs=( $(echo $1 | sed "s/|/ /g") )
@@ -36,7 +34,7 @@ init_interfaces_orderby_macs() {
     echo -n "auto lo" > $interface_file
     for((i=0; i<total_nics; i++))
     do
-        if [[ $i < 3 ]] 
+        if [[ $i < 3 ]]
         then
            echo -n " eth$i" >> $interface_file
         fi
@@ -50,10 +48,9 @@ EOF
     echo "" > $rule_file
     for((i=0; i < ${#macs[@]}; i++))
     do
-        echo "SUBSYSTEM==\"net\", ACTION==\"add\", DRIVERS==\"?*\", ATTR{address}==\"${macs[$i]}\", NAME=\"eth$i\"" >> $rule_file 
+        echo "SUBSYSTEM==\"net\", ACTION==\"add\", DRIVERS==\"?*\", ATTR{address}==\"${macs[$i]}\", NAME=\"eth$i\"" >> $rule_file
     done
 }
-
 
 init_interfaces() {
   if [ "$NIC_MACS" == "" ]
@@ -68,14 +65,13 @@ EOF
   fi
 }
 
-
 setup_interface() {
   local intfnum=$1
   local ip=$2
   local mask=$3
   local gw=$4
   local force=$5
-  local intf=eth${intfnum} 
+  local intf=eth${intfnum}
   local bootproto="static"
 
 
@@ -136,7 +132,6 @@ setup_interface() {
   fi
 }
 
-
 setup_interface_ipv6() {
   sysctl net.ipv6.conf.all.disable_ipv6=0
   sysctl net.ipv6.conf.all.forwarding=1
@@ -168,13 +163,11 @@ enable_fwding() {
   [ -f /etc/iptables/iptables.conf ] && sed  -i "s/ENABLE_ROUTING=.*$/ENABLE_ROUTING=$enabled/" /etc/iptables/iptables.conf && return
 }
 
-
 disable_rpfilter() {
   log_it "cloud: disable rp_filter"
   log_it "disable rpfilter"
-  sed -i "s/net.ipv4.conf.default.rp_filter.*$/net.ipv4.conf.default.rp_filter = 0/" /etc/sysctl.conf 
+  sed -i "s/net.ipv4.conf.default.rp_filter.*$/net.ipv4.conf.default.rp_filter = 0/" /etc/sysctl.conf
 }
-
 
 get_public_vif_list() {
   local vif_list=""
@@ -185,33 +178,32 @@ get_public_vif_list() {
       vif_list="$vif_list $vif";
     fi
   done
-  
+
   echo $vif_list
 }
 
-
 disable_rpfilter_domR() {
   log_it "cloud: Tuning rp_filter on public interfaces"
-  
+
   VIF_LIST=$(get_public_vif_list)
   log_it "rpfilter public interfaces :  $VIF_LIST"
   if [ "$DISABLE_RP_FILTER" == "true" ]
   then
       log_it "cloud: disable rp_filter on public interfaces"
-      sed -i "s/net.ipv4.conf.default.rp_filter.*$/net.ipv4.conf.default.rp_filter = 0/" /etc/sysctl.conf 
+      sed -i "s/net.ipv4.conf.default.rp_filter.*$/net.ipv4.conf.default.rp_filter = 0/" /etc/sysctl.conf
       echo "0" > /proc/sys/net/ipv4/conf/default/rp_filter
       for vif in $VIF_LIST; do
          log_it "cloud: disable rp_filter on public interface: $vif"
-         sed -i "s/net.ipv4.conf.$vif.rp_filter.*$/net.ipv4.conf.$vif.rp_filter = 0/" /etc/sysctl.conf 
+         sed -i "s/net.ipv4.conf.$vif.rp_filter.*$/net.ipv4.conf.$vif.rp_filter = 0/" /etc/sysctl.conf
          echo "0" > /proc/sys/net/ipv4/conf/$vif/rp_filter
       done
   else
       log_it "cloud: enable rp_filter on public interfaces"
-      sed -i "s/net.ipv4.conf.default.rp_filter.*$/net.ipv4.conf.default.rp_filter = 1/" /etc/sysctl.conf 
+      sed -i "s/net.ipv4.conf.default.rp_filter.*$/net.ipv4.conf.default.rp_filter = 1/" /etc/sysctl.conf
       echo "1" > /proc/sys/net/ipv4/conf/default/rp_filter
       for vif in $VIF_LIST; do
          log_it "cloud: enable rp_filter on public interface: $vif"
-         sed -i "s/net.ipv4.conf.$vif.rp_filter.*$/net.ipv4.conf.$vif.rp_filter = 1/" /etc/sysctl.conf 
+         sed -i "s/net.ipv4.conf.$vif.rp_filter.*$/net.ipv4.conf.$vif.rp_filter = 1/" /etc/sysctl.conf
          echo "1" > /proc/sys/net/ipv4/conf/$vif/rp_filter
       done
   fi
@@ -220,7 +212,6 @@ disable_rpfilter_domR() {
   echo "1" > /proc/sys/net/ipv4/conf/eth1/rp_filter
   echo "1" > /proc/sys/net/ipv4/conf/lo/rp_filter
 }
-
 
 enable_irqbalance() {
   local enabled=$1
@@ -237,7 +228,6 @@ enable_irqbalance() {
   [ -f $cfg ] && sed  -i "s/ENABLED=.*$/ENABLED=$enabled/" $cfg && return
 }
 
-
 enable_vpc_rpsrfs() {
     local enable=$1
     if [ $enable -eq 0 ]
@@ -249,7 +239,6 @@ enable_vpc_rpsrfs() {
 
     return 0
 }
-
 
 enable_rpsrfs() {
   local enable=$1
@@ -291,7 +280,6 @@ enable_rpsrfs() {
   echo 256 > /sys/class/net/eth2/queues/rx-0/rps_flow_cnt
 }
 
-
 setup_common() {
   init_interfaces $1 $2 $3
   if [ -n "$ETH0_IP" ]
@@ -307,11 +295,11 @@ setup_common() {
   then
     setup_interface "2" $ETH2_IP $ETH2_MASK $GW
   fi
-   
+
   echo $NAME > /etc/hostname
   echo 'AVAHI_DAEMON_DETECT_LOCAL=0' > /etc/default/avahi-daemon
   hostnamectl set-hostname $NAME
-  
+
   #Nameserver
   sed -i -e "/^nameserver.*$/d" /etc/resolv.conf # remove previous entries
   sed -i -e "/^nameserver.*$/d" /etc/dnsmasq-resolv.conf # remove previous entries
@@ -320,7 +308,7 @@ setup_common() {
     echo "nameserver $internalNS1" > /etc/dnsmasq-resolv.conf
     echo "nameserver $internalNS1" > /etc/resolv.conf
   fi
-  
+
   if [ -n "$internalNS2" ]
   then
     echo "nameserver $internalNS2" >> /etc/dnsmasq-resolv.conf
@@ -331,7 +319,7 @@ setup_common() {
     echo "nameserver $NS1" >> /etc/dnsmasq-resolv.conf
     echo "nameserver $NS1" >> /etc/resolv.conf
   fi
-  
+
   if [ -n "$NS2" ]
   then
     echo "nameserver $NS2" >> /etc/dnsmasq-resolv.conf
@@ -366,7 +354,7 @@ setup_common() {
     ip route add default via $GW dev $gwdev
 
   fi
- 
+
   # a hacking way to activate vSwitch under VMware
   ping -n -c 3 $GW &
   sleep 3
@@ -381,15 +369,13 @@ setup_common() {
       ping -n -c 3 $MGMT_GW &
       sleep 3
       pkill ping
-  
+
   fi
 
-  local hyp=$(hypervisor)
-  if [ "$hyp" == "vmware" ]; then
+  if [ "$HYPERVISOR" == "vmware" ]; then
       ntpq -p &> /dev/null || vmware-toolbox-cmd timesync enable
   fi
 }
-
 
 setup_dnsmasq() {
   log_it "Setting up dnsmasq"
@@ -404,7 +390,7 @@ setup_dnsmasq() {
 
   #get the template
   cp /etc/dnsmasq.conf.tmpl /etc/dnsmasq.conf
-  
+
   if [ -n "$DOMAIN" ]
   then
         #send domain name to dhcp clients
@@ -414,17 +400,17 @@ setup_dnsmasq() {
         #answer all local domain queries
         sed  -i -e "s/^[#]*local=.*$/local=\/$DOMAIN\//" /etc/dnsmasq.conf
   fi
-  
+
   if [ -n  "$DNS_SEARCH_ORDER" ]
   then
       sed -i -e "/^[#]*dhcp-option.*=119.*$/d" /etc/dnsmasq.conf
       echo "dhcp-option-force=119,$DNS_SEARCH_ORDER" >> /etc/dnsmasq.conf
       # set the domain search order as a space seprated list for option 15
       DNS_SEARCH_ORDER=$(echo $DNS_SEARCH_ORDER | sed 's/,/ /g')
-      #send domain name to dhcp clients 
+      #send domain name to dhcp clients
       sed -i s/[#]*dhcp-option=15.*$/dhcp-option=15,\""$DNS_SEARCH_ORDER"\"/ /etc/dnsmasq.conf
   fi
-  
+
   if [ $DHCP_RANGE ]
   then
     sed -i -e "s/^dhcp-range_ip4=.*$/dhcp-range=$DHCP_RANGE,static/" /etc/dnsmasq.conf
@@ -479,8 +465,8 @@ setup_dnsmasq() {
   NS6=${NS6%?}
   [ $ETH0_IP ] && echo "dhcp-option=6,$NS" >> /etc/dnsmasq.conf
   [ $ETH0_IP6 ] && echo "dhcp-option=option6:dns-server,$NS6" >> /etc/dnsmasq.conf
-#adding the name data-server to the /etc/hosts for allowing the access to user-data service and ssh-key reset in every subnet.
-#removing the existing entires to avoid duplicates on restarts.
+  #adding the name data-server to the /etc/hosts for allowing the access to user-data service and ssh-key reset in every subnet.
+  #removing the existing entires to avoid duplicates on restarts.
   sed -i  '/data-server/d' /etc/hosts
   if [ -n "$ETH0_IP" ]
           then
@@ -490,7 +476,7 @@ setup_dnsmasq() {
       then
        echo "$ETH0_IP6 data-server" >> /etc/hosts
   fi
-#add the dhcp-client-update only if dnsmasq version is 2.6 and above
+  #add the dhcp-client-update only if dnsmasq version is 2.6 and above
   dnsmasqVersion=$(dnsmasq -v |  grep version -m 1 | grep -o  "[[:digit:]]\.[[:digit:]]")
   major=$(echo "$dnsmasqVersion" | cut -d '.' -f 1)
   minor=$(echo "$dnsmasqVersion" | cut -d '.' -f 2)
@@ -511,7 +497,6 @@ setup_dnsmasq() {
   fi
 }
 
-
 setup_sshd(){
   local ip=$1
   local eth=$2
@@ -521,14 +506,12 @@ setup_sshd(){
   systemctl restart sshd
 }
 
-
 setup_vpc_apache2() {
   log_it "Setting up apache web server for VPC"
   systemctl disable apache2
   clean_ipalias_config
   setup_apache2_common
 }
-
 
 clean_ipalias_config() {
   # Old
@@ -550,7 +533,6 @@ clean_ipalias_config() {
   rm -rf /etc/failure_config
 }
 
-
 setup_apache2_common() {
   sed -i 's/^Include ports.conf.*/# CS: Done by Python CsApp config\n#Include ports.conf/g' /etc/apache2/apache2.conf
   [ -f /etc/apache2/conf.d/security ] && sed -i -e "s/^ServerTokens .*/ServerTokens Prod/g" /etc/apache2/conf.d/security
@@ -562,7 +544,6 @@ setup_apache2_common() {
   echo "Options -Indexes" > /var/www/html/.htaccess
 }
 
-
 setup_apache2() {
   log_it "Setting up apache web server"
   clean_ipalias_config
@@ -570,14 +551,12 @@ setup_apache2() {
   local ip=$1
 }
 
-
 setup_aesni() {
   if [ `grep aes /proc/cpuinfo | wc -l` -gt 0 ]
   then
     modprobe aesni_intel
   fi
 }
-
 
 setup_storage_network() {
     if [ x"$STORAGE_IP" == "x" -o x"$STORAGE_NETMASK" == "x" ]
@@ -595,7 +574,6 @@ setup_storage_network() {
     log_it "Successfully setup storage network with STORAGE_IP:$STORAGE_IP, STORAGE_NETMASK:$STORAGE_NETMASK, STORAGE_CIDR:$STORAGE_CIDR"
 }
 
-
 setup_system_rfc1918_internal() {
   public_ip=`getPublicIp`
   echo "$public_ip" | grep -E "^((127\.)|(10\.)|(172\.1[6-9]\.)|(172\.2[0-9]\.)|(172\.3[0-1]\.)|(192\.168\.))"
@@ -612,13 +590,11 @@ setup_system_rfc1918_internal() {
   fi
 }
 
-
 getPublicIp() {
   public_ip=$ETH2_IP
   [ "$ETH2_IP" == "0.0.0.0" ] && public_ip=$ETH1_IP
   echo $public_ip
 }
-
 
 setup_ntp() {
     log_it "Setting up NTP"
@@ -640,3 +616,218 @@ setup_ntp() {
         log_it "NTP configuration file not found"
     fi
 }
+
+routing_svcs() {
+   grep "redundant_router=1" /var/cache/cloud/cmdline > /dev/null
+   RROUTER=$?
+   systemctl disable --now cloud
+   systemctl disable --now haproxy
+   systemctl disable --now nfs-common
+   systemctl disable --now portmap
+   systemctl enable --now ssh
+   echo "ssh haproxy apache2" > /var/cache/cloud/enabled_svcs
+   echo "cloud nfs-common portmap" > /var/cache/cloud/disabled_svcs
+   if [ $RROUTER -eq 0 ]
+   then
+       systemctl disable --now cloud-passwd-srvr
+       systemctl disable --now dnsmasq
+       systemctl enable --now conntrackd
+       systemctl enable --now keepalived
+       systemctl enable --now postinit
+       echo "keepalived conntrackd postinit" >> /var/cache/cloud/enabled_svcs
+       echo "dnsmasq cloud-passwd-srvr" >> /var/cache/cloud/disabled_svcs
+   else
+       systemctl disable --now conntrackd
+       systemctl disable --now keepalived
+       systemctl enable --now cloud-passwd-srvr
+       systemctl enable --now dnsmasq
+       echo "dnsmasq cloud-passwd-srvr " >> /var/cache/cloud/enabled_svcs
+       echo "keepalived conntrackd " >> /var/cache/cloud/disabled_svcs
+   fi
+}
+
+parse_cmd_line() {
+  CMDLINE=$(cat /var/cache/cloud/cmdline)
+  TYPE="unknown"
+  BOOTPROTO="static"
+  DISABLE_RP_FILTER="false"
+  STORAGE_IP=""
+  STORAGE_NETMASK=""
+  STORAGE_CIDR=""
+  VM_PASSWORD=""
+
+  CHEF_TMP_FILE=/tmp/cmdline.json
+  COMMA="\t"
+  echo -e "{\n\"type\": \"cmdline\"," > ${CHEF_TMP_FILE}
+  echo -e "\n\"cmd_line\": {" >> ${CHEF_TMP_FILE}
+
+  for i in $CMDLINE
+    do
+      # search for foo=bar pattern and cut out foo
+      KEY=$(echo $i | cut -d= -f1)
+      VALUE=$(echo $i | cut -d= -f2)
+      echo -en ${COMMA} >> ${CHEF_TMP_FILE}
+      # Two lines so values do not accidently interpretted as escapes!!
+      echo -n \"${KEY}\"': '\"${VALUE}\" >> ${CHEF_TMP_FILE}
+      COMMA=",\n\t"
+      case $KEY in
+        disable_rp_filter)
+            export DISABLE_RP_FILTER=$VALUE
+            ;;
+        eth0ip)
+            export ETH0_IP=$VALUE
+            ;;
+        eth1ip)
+            export ETH1_IP=$VALUE
+            ;;
+        eth2ip)
+            export ETH2_IP=$VALUE
+            ;;
+        host)
+            export MGMT_HOST=$VALUE
+            ;;
+        gateway)
+            export GW=$VALUE
+            ;;
+        ip6gateway)
+            export IP6GW=$VALUE
+            ;;
+        eth0mask)
+            export ETH0_MASK=$VALUE
+            ;;
+        eth1mask)
+            export ETH1_MASK=$VALUE
+            ;;
+        eth2mask)
+            export ETH2_MASK=$VALUE
+            ;;
+        eth0ip6)
+            export ETH0_IP6=$VALUE
+            ;;
+        eth0ip6prelen)
+            export ETH0_IP6_PRELEN=$VALUE
+            ;;
+        internaldns1)
+            export internalNS1=$VALUE
+            ;;
+        internaldns2)
+            export internalNS2=$VALUE
+            ;;
+        dns1)
+            export NS1=$VALUE
+            ;;
+        dns2)
+            export NS2=$VALUE
+            ;;
+        ip6dns1)
+            export IP6_NS1=$VALUE
+            ;;
+        ip6dns2)
+            export IP6_NS2=$VALUE
+            ;;
+        domain)
+            export DOMAIN=$VALUE
+            ;;
+        dnssearchorder)
+            export DNS_SEARCH_ORDER=$VALUE
+            ;;
+        useextdns)
+            export USE_EXTERNAL_DNS=$VALUE
+            ;;
+        mgmtcidr)
+            export MGMTNET=$VALUE
+            ;;
+        localgw)
+            export LOCAL_GW=$VALUE
+            ;;
+        template)
+            export TEMPLATE=$VALUE
+            ;;
+        sshonguest)
+            export SSHONGUEST=$VALUE
+            ;;
+        name)
+            export NAME=$VALUE
+            ;;
+        dhcprange)
+            export DHCP_RANGE=$(echo $VALUE | tr ':' ',')
+            ;;
+        bootproto)
+            export BOOTPROTO=$VALUE
+            ;;
+        type)
+            export TYPE=$VALUE
+            ;;
+        defaultroute)
+            export DEFAULTROUTE=$VALUE
+            ;;
+        redundant_router)
+            export RROUTER=$VALUE
+            ;;
+        guestgw)
+            export GUEST_GW=$VALUE
+            ;;
+        guestbrd)
+            export GUEST_BRD=$VALUE
+            ;;
+        guestcidrsize)
+            export GUEST_CIDR_SIZE=$VALUE
+            ;;
+        router_pr)
+            export ROUTER_PR=$VALUE
+            ;;
+        extra_pubnics)
+            export EXTRA_PUBNICS=$VALUE
+            ;;
+        nic_macs)
+            export NIC_MACS=$VALUE
+            ;;
+        mtu)
+            export MTU=$VALUE
+            ;;
+        storageip)
+            export STORAGE_IP=$VALUE
+            ;;
+        storagenetmask)
+            export STORAGE_NETMASK=$VALUE
+            ;;
+        storagecidr)
+            export STORAGE_CIDR=$VALUE
+            ;;
+        vmpassword)
+            export VM_PASSWORD=$VALUE
+            ;;
+        vpccidr)
+            export VPCCIDR=$VALUE
+            ;;
+        cidrsize)
+            export CIDR_SIZE=$VALUE
+            ;;
+        advert_int)
+            export ADVERT_INT=$VALUE
+            ;;
+        ntpserverlist)
+            export NTP_SERVER_LIST=$VALUE
+            ;;
+      esac
+  done
+  echo -e "\n\t}\n}" >> ${CHEF_TMP_FILE}
+  if [ "$TYPE" != "unknown" ]
+  then
+    mv ${CHEF_TMP_FILE} /var/cache/cloud/cmd_line.json
+  fi
+
+  [ $ETH0_IP ] && export LOCAL_ADDRS=$ETH0_IP
+  [ $ETH0_IP6 ] && export LOCAL_ADDRS=$ETH0_IP6
+  [ $ETH0_IP ] && [ $ETH0_IP6 ] && export LOCAL_ADDRS="$ETH0_IP,$ETH0_IP6"
+
+  # Randomize cloud password so only ssh login is allowed
+  echo "cloud:`openssl rand -base64 32`" | chpasswd
+
+  if [ x"$VM_PASSWORD" != x"" ]
+  then
+    echo "root:$VM_PASSWORD" | chpasswd
+  fi
+}
+
+parse_cmd_line

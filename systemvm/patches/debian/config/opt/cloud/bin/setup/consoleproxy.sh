@@ -18,10 +18,24 @@
 
 . /opt/cloud/bin/setup/common.sh
 
+consoleproxy_svcs() {
+   systemctl disable --now apache2
+   systemctl disable --now cloud-passwd-srvr
+   systemctl disable --now conntrackd
+   systemctl disable --now dnsmasq
+   systemctl disable --now haproxy
+   systemctl disable --now keepalived
+   systemctl disable --now nfs-common
+   systemctl disable --now portmap
+   systemctl enable --now postinit
+   systemctl enable --now ssh
+   echo "cloud postinit ssh" > /var/cache/cloud/enabled_svcs
+   echo "cloud-passwd-srvr haproxy dnsmasq apache2 nfs-common portmap" > /var/cache/cloud/disabled_svcs
+   mkdir -p /var/log/cloud
+}
 
 setup_console_proxy() {
   log_it "Setting up console proxy system vm"
-  local hyp=$HYPERVISOR
   setup_common eth0 eth1 eth2
   setup_system_rfc1918_internal
   public_ip=`getPublicIp`
@@ -29,18 +43,24 @@ setup_console_proxy() {
   echo "$public_ip $NAME" >> /etc/hosts
   cp /etc/iptables/iptables-consoleproxy /etc/iptables/rules.v4
   cp /etc/iptables/iptables-consoleproxy /etc/iptables/rules
+  local hyp=$HYPERVISOR
   if [ "$hyp" == "vmware" ] || [ "$hyp" == "hyperv" ]; then
     setup_sshd $ETH1_IP "eth1"
   else
     setup_sshd $ETH0_IP "eth0"
   fi
 
-  systemctl enable cloud
+  systemctl enable --now cloud
   disable_rpfilter
   enable_fwding 0
   enable_irqbalance 0
-  systemctl disable nfs-common
   rm /etc/logrotate.d/cloud
 }
 
+consoleproxy_svcs
+if [ $? -gt 0 ]
+then
+  log_it "Failed to execute consoleproxy_svcs"
+  exit 1
+fi
 setup_console_proxy

@@ -27,6 +27,7 @@
 #set -x
 #exec 3>&0 4>&1 > /var/log/test.log 2>&1
 PATH="/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
+CMDLINE=/var/cache/cloud/cmdline
 
 # Clear boot up flag, it would be created by rc.local after boot up done
 rm -f /var/cache/cloud/boot_up_done
@@ -35,12 +36,10 @@ rm -f /var/cache/cloud/boot_up_done
 
 . /lib/lsb/init-functions
 
-
 log_it() {
   echo "$(date) $@" >> /var/log/cloud.log
   log_action_msg "$@"
 }
-
 
 hypervisor() {
   [ -d /proc/xen ] && mount -t xenfs none /proc/xen
@@ -57,19 +56,33 @@ hypervisor() {
   echo "unknown" && return 1
 }
 
-
 config_guest() {
-  [ -f /usr/sbin/hv_kvp_daemon ] && /usr/sbin/hv_kvp_daemon
+  if [ "$HYPERVISOR" == "kvm" ]
+  then
+    # Configure hot-plug
+    sed -i -e "/acpiphp/d" /etc/modules
+    sed -i -e "/pci_hotplug/d" /etc/modules
+    echo acpiphp >> /etc/modules
+    echo pci_hotplug >> /etc/modules
+    # Configure serial console FIXME: remove during build we enable it?
+    #sed -i -e "/^serial.*/d" /boot/grub/grub.conf
+    #sed -i -e "/^terminal.*/d" /boot/grub/grub.conf
+    #sed -i -e "/^default.*/a\serial --unit=0 --speed=115200 --parity=no --stop=1" /boot/grub/grub.conf
+    #sed -i -e "/^serial.*/a\terminal --timeout=0 serial console" /boot/grub/grub.conf
+    #sed -i -e "s/\(^kernel.* ro\) \(console.*\)/\1 console=tty0 console=ttyS0,115200n8/" /boot/grub/grub.conf
+    sed -i -e "/^s0:2345:respawn.*/d" /etc/inittab
+    sed -i -e "/6:23:respawn/a\s0:2345:respawn:/sbin/getty -L 115200 ttyS0 vt102" /etc/inittab
+  fi
   [ ! -d /proc/xen ] && sed -i 's/^vc/#vc/' /etc/inittab && telinit q
   [  -d /proc/xen ] && sed -i 's/^#vc/vc/' /etc/inittab && telinit q
+  [ -f /usr/sbin/hv_kvp_daemon ] && /usr/sbin/hv_kvp_daemon
 }
-
 
 get_boot_params() {
   case $HYPERVISOR in
      xen-domU|xen-hvm)
-          cat /proc/cmdline > /var/cache/cloud/cmdline
-          sed -i "s/%/ /g" /var/cache/cloud/cmdline
+          cat /proc/cmdline > $CMDLINE
+          sed -i "s/%/ /g" $CMDLINE
           ;;
      kvm)
           VPORT=$(find /dev/virtio-ports -type l -name '*.vport' 2>/dev/null|head -1)
@@ -89,7 +102,7 @@ get_boot_params() {
             while read line; do
               if [[ $line == cmdline:* ]]; then
                 cmd=${line//cmdline:/}
-                echo $cmd > /var/cache/cloud/cmdline
+                echo $cmd > $CMDLINE
               elif [[ $line == pubkey:* ]]; then
                 pubkey=${line//pubkey:/}
                 echo $pubkey > /var/cache/cloud/authorized_keys
@@ -98,7 +111,7 @@ get_boot_params() {
             done < $VPORT
             # In case of reboot we do not send the boot args again.
             # So, no need to wait for them, as the boot args are already set at startup
-            if [ -s /var/cache/cloud/cmdline  ]
+            if [ -s $CMDLINE  ]
             then
               log_it "Found a non empty cmdline file. Will now exit the loop and proceed with configuration."
               break;
@@ -109,20 +122,20 @@ get_boot_params() {
           chmod go-rwx /root/.ssh/authorized_keys
           ;;
      vmware)
-          vmtoolsd --cmd 'machine.id.get' > /var/cache/cloud/cmdline 
+          vmtoolsd --cmd 'machine.id.get' > $CMDLINE
           ;;
      virtualpc|hyperv)
           # Hyper-V is recognized as virtualpc hypervisor type. Boot args are passed using KVP Daemon
           #waiting for the hv_kvp_daemon to start up
           #sleep  need to fix the race condition of hv_kvp_daemon and cloud-early-config
           sleep 5
-          cp -f /var/opt/hyperv/.kvp_pool_0 /var/cache/cloud/cmdline
+          cp -f /var/opt/hyperv/.kvp_pool_0 $CMDLINE
           cat /dev/null > /var/opt/hyperv/.kvp_pool_0
           ;;
      virtualbox)
           # Virtualbox is used to test the virtual router
           # get the commandline from a dmistring  (yes, hacky!)
-          dmidecode | grep cmdline | sed 's/^.*cmdline://' > /var/cache/cloud/cmdline
+          dmidecode | grep cmdline | sed 's/^.*cmdline://' > $CMDLINE
           RV=$?
           if [ $RV -ne 0 ] ; then
             log_it "Failed to get cmdline from a virtualbox dmi property"
@@ -131,183 +144,20 @@ get_boot_params() {
   esac
 }
 
-
-parse_cmd_line() {
-  CMDLINE=$(cat /var/cache/cloud/cmdline)
-  TYPE="unknown"
-  BOOTPROTO="static"
-  DISABLE_RP_FILTER="false"
-  STORAGE_IP=""
-  STORAGE_NETMASK=""
-  STORAGE_CIDR=""
-  VM_PASSWORD=""
-
-  CHEF_TMP_FILE=/tmp/cmdline.json
-  COMMA="\t"
-  echo -e "{\n\"type\": \"cmdline\"," > ${CHEF_TMP_FILE}
-  echo -e "\n\"cmd_line\": {" >> ${CHEF_TMP_FILE}
-
-  for i in $CMDLINE
+get_systemvm_type() {
+  for str in $(cat $CMDLINE)
     do
-      # search for foo=bar pattern and cut out foo
-      KEY=$(echo $i | cut -d= -f1)
-      VALUE=$(echo $i | cut -d= -f2)
-      echo -en ${COMMA} >> ${CHEF_TMP_FILE}
-      # Two lines so values do not accidently interpretted as escapes!!
-      echo -n \"${KEY}\"': '\"${VALUE}\" >> ${CHEF_TMP_FILE}
-      COMMA=",\n\t"
+      KEY=$(echo $str | cut -d= -f1)
+      VALUE=$(echo $str | cut -d= -f2)
       case $KEY in
-        disable_rp_filter)
-            export DISABLE_RP_FILTER=$VALUE
-            ;;
-        eth0ip)
-            export ETH0_IP=$VALUE
-            ;;
-        eth1ip)
-            export ETH1_IP=$VALUE
-            ;;
-        eth2ip)
-            export ETH2_IP=$VALUE
-            ;;
-        host)
-            export MGMT_HOST=$VALUE
-            ;;
-        gateway)
-            export GW=$VALUE
-            ;;
-        ip6gateway)
-            export IP6GW=$VALUE
-            ;;
-        eth0mask)
-            export ETH0_MASK=$VALUE
-            ;;
-        eth1mask)
-            export ETH1_MASK=$VALUE
-            ;;
-        eth2mask)
-            export ETH2_MASK=$VALUE
-            ;;
-        eth0ip6)
-            export ETH0_IP6=$VALUE
-            ;;
-        eth0ip6prelen)
-            export ETH0_IP6_PRELEN=$VALUE
-            ;;
-        internaldns1)
-            export internalNS1=$VALUE
-            ;;
-        internaldns2)
-            export internalNS2=$VALUE
-            ;;
-        dns1)
-            export NS1=$VALUE
-            ;;
-        dns2)
-            export NS2=$VALUE
-            ;;
-        ip6dns1)
-            export IP6_NS1=$VALUE
-            ;;
-        ip6dns2)
-            export IP6_NS2=$VALUE
-            ;;
-        domain)
-            export DOMAIN=$VALUE
-            ;;
-        dnssearchorder)
-            export DNS_SEARCH_ORDER=$VALUE
-            ;;
-        useextdns)
-            export USE_EXTERNAL_DNS=$VALUE
-            ;;
-        mgmtcidr)
-            export MGMTNET=$VALUE
-            ;;
-        localgw)
-            export LOCAL_GW=$VALUE
-            ;;
-        template)
-            export TEMPLATE=$VALUE
-            ;;
-        sshonguest)
-            export SSHONGUEST=$VALUE
-            ;;
-        name)
-            export NAME=$VALUE
-            ;;
-        dhcprange)
-            export DHCP_RANGE=$(echo $VALUE | tr ':' ',')
-            ;;
-        bootproto)
-            export BOOTPROTO=$VALUE
-            ;;
         type)
-            export TYPE=$VALUE
-            ;;
-        defaultroute)
-            export DEFAULTROUTE=$VALUE
-            ;;
-        redundant_router)
-            export RROUTER=$VALUE
-            ;;
-        guestgw)
-            export GUEST_GW=$VALUE
-            ;;
-        guestbrd)
-            export GUEST_BRD=$VALUE
-            ;;
-        guestcidrsize)
-            export GUEST_CIDR_SIZE=$VALUE
-            ;;
-        router_pr)
-            export ROUTER_PR=$VALUE
-            ;;
-        extra_pubnics)
-            export EXTRA_PUBNICS=$VALUE
-            ;;
-        nic_macs)
-            export NIC_MACS=$VALUE
-            ;;
-        mtu)
-            export MTU=$VALUE
-            ;;
-        storageip)
-            export STORAGE_IP=$VALUE
-            ;;
-        storagenetmask)
-            export STORAGE_NETMASK=$VALUE
-            ;;
-        storagecidr)
-            export STORAGE_CIDR=$VALUE
-            ;;
-        vmpassword)
-            export VM_PASSWORD=$VALUE
-            ;;
-        vpccidr)
-            export VPCCIDR=$VALUE
-            ;;
-        cidrsize)
-            export CIDR_SIZE=$VALUE
-            ;;
-        advert_int)
-            export ADVERT_INT=$VALUE
-            ;;
-        ntpserverlist)
-            export NTP_SERVER_LIST=$VALUE
-            ;;
+          export TYPE=$VALUE
+          ;;
+        *)
+          ;;
       esac
   done
-  echo -e "\n\t}\n}" >> ${CHEF_TMP_FILE}
-  if [ "$TYPE" != "unknown" ]
-  then
-    mv ${CHEF_TMP_FILE} /var/cache/cloud/cmd_line.json
-  fi
-
-  [ $ETH0_IP ] && export LOCAL_ADDRS=$ETH0_IP
-  [ $ETH0_IP6 ] && export LOCAL_ADDRS=$ETH0_IP6
-  [ $ETH0_IP ] && [ $ETH0_IP6 ] && export LOCAL_ADDRS="$ETH0_IP,$ETH0_IP6"
 }
-
 
 patch() {
   local PATCH_MOUNT=/media/cdrom
@@ -345,33 +195,19 @@ patch() {
       tar xzf $patchfile -C /
       echo ${newmd5} > ${md5file}
       log_it "Patched scripts using $patchfile"
-      sync
     fi
 
     log_it "Patching cloud service"
-    /opt/cloud/bin/setup/patchsystemvm.sh $PATCH_MOUNT $HYPERVISOR $TYPE
+    /opt/cloud/bin/setup/patchsystemvm.sh $PATCH_MOUNT $TYPE
     umount $PATCH_MOUNT
   fi
 
   if [ -f /mnt/cmdline ]; then
-    cat /mnt/cmdline > /var/cache/cloud/cmdline
-    parse_cmd_line
+    cat /mnt/cmdline > $CMDLINE
   fi
 
   return 0
 }
-
-
-change_password() {
-  # Randomize cloud password so only ssh login is allowed
-  echo "cloud:`openssl rand -base64 32`" | chpasswd
-
-  if [ x"$VM_PASSWORD" != x"" ]
-  then
-    echo "root:$VM_PASSWORD" | chpasswd
-  fi
-}
-
 
 start() {
   # Clear /tmp for file lock
@@ -384,9 +220,11 @@ start() {
 
   config_guest
   get_boot_params
-  parse_cmd_line
+  get_systemvm_type
   patch
-  change_password
+  sync
+
+  log_it "Configuring systemvm type=$TYPE"
 
   if [ -f "/opt/cloud/bin/setup/$TYPE.sh" ]; then
       /opt/cloud/bin/setup/$TYPE.sh
@@ -394,9 +232,10 @@ start() {
       /opt/cloud/bin/setup/default.sh
   fi
 
+  log_it "Finished setting up systemvm"
+
   return 0
 }
-
 
 case "$1" in
   start)

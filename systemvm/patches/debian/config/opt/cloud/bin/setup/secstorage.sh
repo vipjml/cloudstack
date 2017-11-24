@@ -18,6 +18,20 @@
 
 . /opt/cloud/bin/setup/common.sh
 
+secstorage_svcs() {
+   systemctl disable --now cloud-passwd-srvr
+   systemctl disable --now conntrackd
+   systemctl disable --now dnsmasq
+   systemctl disable --now haproxy
+   systemctl disable --now keepalived
+   systemctl enable --now nfs-common
+   systemctl enable --now portmap
+   systemctl enable --now postinit
+   systemctl enable --now ssh
+   echo "cloud postinit ssh nfs-common portmap" > /var/cache/cloud/enabled_svcs
+   echo "cloud-passwd-srvr haproxy dnsmasq" > /var/cache/cloud/disabled_svcs
+   mkdir -p /var/log/cloud
+}
 
 setup_secstorage() {
   log_it "Setting up secondary storage system vm"
@@ -63,12 +77,17 @@ CORS
 
   disable_rpfilter
   enable_fwding 0
-  systemctl disable haproxy dnsmasq cloud-passwd-srvr
-  systemctl enable cloud apache2
-  systemctl restart cloud apache2
+
+  systemctl enable --now cloud apache2
   enable_irqbalance 0
   rm /etc/logrotate.d/cloud
   setup_ntp
 }
 
+secstorage_svcs
+if [ $? -gt 0 ]
+then
+  log_it "Failed to execute secstorage_svcs"
+  exit 1
+fi
 setup_secstorage

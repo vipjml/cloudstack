@@ -18,6 +18,17 @@
 
 . /opt/cloud/bin/setup/common.sh
 
+ilbvm_svcs() {
+   systemctl disable --now cloud
+   systemctl disable --now conntrackd
+   systemctl disable --now keepalived
+   systemctl disable --now nfs-common
+   systemctl disable --now portmap
+   systemctl enable --now haproxy
+   systemctl enable --now ssh
+   echo "ssh haproxy" > /var/cache/cloud/enabled_svcs
+   echo "cloud dnsmasq cloud-passwd-srvr apache2 nfs-common portmap" > /var/cache/cloud/disabled_svcs
+}
 
 setup_ilbvm() {
   log_it "Setting up Internal Load Balancer system vm"
@@ -40,3 +51,9 @@ setup_ilbvm() {
 }
 
 setup_ilbvm
+ilbvm_svcs
+if [ $? -gt 0 ]
+then
+  log_it "Failed to execute ilbvm svcs"
+  exit 1
+fi

@@ -109,3 +109,9 @@ setup_router() {
 }
 
 setup_router
+routing_svcs
+if [ $? -gt 0 ]
+then
+  log_it "Failed to execute routing_svcs"
+  exit 1
+fi

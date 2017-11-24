@@ -18,6 +18,19 @@
 
 . /opt/cloud/bin/setup/common.sh
 
+dhcpsrvr_svcs() {
+   systemctl disable --now cloud
+   systemctl disable --now conntrackd
+   systemctl disable --now haproxy
+   systemctl disable --now keepalived
+   systemctl disable --now nfs-common
+   systemctl disable --now portmap
+   systemctl enable --now cloud-passwd-srvr
+   systemctl enable --now dnsmasq
+   systemctl enable --now ssh
+   echo "ssh dnsmasq cloud-passwd-srvr apache2" > /var/cache/cloud/enabled_svcs
+   echo "cloud nfs-common haproxy portmap" > /var/cache/cloud/disabled_svcs
+}
 
 setup_dhcpsrvr() {
   log_it "Setting up dhcp server system vm"
@@ -58,3 +71,9 @@ setup_dhcpsrvr() {
 }
 
 setup_dhcpsrvr
+dhcpsrvr_svcs
+if [ $? -gt 0 ]
+then
+  log_it "Failed to execute dhcpsrvr_svcs"
+  exit 1
+fi
