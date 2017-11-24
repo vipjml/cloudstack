@@ -24,10 +24,10 @@ secstorage_svcs() {
    systemctl disable --now dnsmasq
    systemctl disable --now haproxy
    systemctl disable --now keepalived
-   systemctl enable --now nfs-common
-   systemctl enable --now portmap
-   systemctl enable --now postinit
-   systemctl enable --now ssh
+   systemctl enable nfs-common
+   systemctl enable portmap
+   systemctl enable postinit
+   systemctl enable ssh
    echo "cloud postinit ssh nfs-common portmap" > /var/cache/cloud/enabled_svcs
    echo "cloud-passwd-srvr haproxy dnsmasq" > /var/cache/cloud/disabled_svcs
    mkdir -p /var/log/cloud
@@ -40,17 +40,24 @@ setup_secstorage() {
   setup_common eth0 eth1 eth2
   setup_storage_network
   setup_system_rfc1918_internal
+
+  log_it "Setting up entry in hosts"
   sed -i  /gateway/d /etc/hosts
   public_ip=`getPublicIp`
   echo "$public_ip $NAME" >> /etc/hosts
 
+  log_it "Applying iptables rules"
   cp /etc/iptables/iptables-secstorage /etc/iptables/rules.v4
   cp /etc/iptables/iptables-secstorage /etc/iptables/rules
+
+  log_it "Configuring sshd"
   if [ "$hyp" == "vmware" ] || [ "$hyp" == "hyperv" ]; then
     setup_sshd $ETH1_IP "eth1"
   else
     setup_sshd $ETH0_IP "eth0"
   fi
+
+  log_it "Configuring apache2"
   setup_apache2 $ETH2_IP
 
   # Deprecated, should move to Cs Python all of it
@@ -60,7 +67,7 @@ setup_secstorage() {
     -e "s/Listen .*:443/Listen $ETH2_IP:443/g" \
     -e "s/NameVirtualHost .*:80/NameVirtualHost $ETH2_IP:80/g" /etc/apache2/vhost.template > /etc/apache2/sites-enabled/vhost-${ETH2_IP}.conf
 
-  log_it "setting up apache2 for post upload of volume/template"
+  log_it "Setting up apache2 for post upload of volume/template"
   a2enmod proxy
   a2enmod proxy_http
   a2enmod headers
@@ -78,9 +85,9 @@ CORS
   disable_rpfilter
   enable_fwding 0
 
-  systemctl enable --now cloud apache2
+  systemctl enable cloud apache2
   enable_irqbalance 0
-  rm /etc/logrotate.d/cloud
+  rm -f /etc/logrotate.d/cloud
   setup_ntp
 }
 

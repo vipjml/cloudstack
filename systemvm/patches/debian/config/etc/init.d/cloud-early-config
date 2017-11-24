@@ -60,10 +60,8 @@ config_guest() {
   if [ "$HYPERVISOR" == "kvm" ]
   then
     # Configure hot-plug
-    sed -i -e "/acpiphp/d" /etc/modules
-    sed -i -e "/pci_hotplug/d" /etc/modules
-    echo acpiphp >> /etc/modules
-    echo pci_hotplug >> /etc/modules
+    modprobe acpiphp || true
+    modprobe pci_hotplug || true
     # Configure serial console FIXME: remove during build we enable it?
     #sed -i -e "/^serial.*/d" /boot/grub/grub.conf
     #sed -i -e "/^terminal.*/d" /boot/grub/grub.conf
@@ -183,7 +181,6 @@ patch() {
 
   if [ -n "$cdrom_dev" ]; then
     mount -o ro $cdrom_dev $PATCH_MOUNT
-    [ -f $privkey ] && cp -f $privkey /root/.ssh/ && chmod go-rwx /root/.ssh/authorized_keys
     local oldmd5=
     [ -f ${md5file} ] && oldmd5=$(cat ${md5file})
     local newmd5=
@@ -201,6 +198,8 @@ patch() {
     /opt/cloud/bin/setup/patchsystemvm.sh $PATCH_MOUNT $TYPE
     umount $PATCH_MOUNT
   fi
+
+  [ -f $privkey ] && cp -f $privkey /root/.ssh/ && chmod go-rwx /root/.ssh/authorized_keys
 
   if [ -f /mnt/cmdline ]; then
     cat /mnt/cmdline > $CMDLINE

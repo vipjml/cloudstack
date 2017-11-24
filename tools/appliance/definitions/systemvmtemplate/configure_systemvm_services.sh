@@ -147,6 +147,7 @@ function configure_services() {
   systemctl daemon-reload
   systemctl disable apt-daily.service
   systemctl disable apt-daily.timer
+  systemctl disable apt-daily-upgrade.timer
 
   # Disable services that slow down boot and are not used anyway
   systemctl disable apache2

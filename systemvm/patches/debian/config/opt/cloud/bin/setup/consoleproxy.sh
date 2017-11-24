@@ -27,8 +27,8 @@ consoleproxy_svcs() {
    systemctl disable --now keepalived
    systemctl disable --now nfs-common
    systemctl disable --now portmap
-   systemctl enable --now postinit
-   systemctl enable --now ssh
+   systemctl enable postinit
+   systemctl enable ssh
    echo "cloud postinit ssh" > /var/cache/cloud/enabled_svcs
    echo "cloud-passwd-srvr haproxy dnsmasq apache2 nfs-common portmap" > /var/cache/cloud/disabled_svcs
    mkdir -p /var/log/cloud
@@ -54,7 +54,7 @@ setup_console_proxy() {
   disable_rpfilter
   enable_fwding 0
   enable_irqbalance 0
-  rm /etc/logrotate.d/cloud
+  rm -f /etc/logrotate.d/cloud
 }
 
 consoleproxy_svcs

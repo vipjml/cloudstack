@@ -24,7 +24,6 @@ rm -f console-proxy.jar
 rm -f console-common.jar
 rm -f conf/cloud.properties
 
-
 CP="./:./conf:$(ls *.jar | tr '\n' ':' | sed s'/.$//')"
 
 keyvalues=

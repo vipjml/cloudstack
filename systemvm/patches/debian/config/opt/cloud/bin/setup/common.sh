@@ -74,7 +74,6 @@ setup_interface() {
   local intf=eth${intfnum}
   local bootproto="static"
 
-
   if [ "$BOOTPROTO" == "dhcp" ]
   then
     if [ "$intfnum" != "0" ]
@@ -106,28 +105,6 @@ setup_interface() {
       if [ "$RROUTER" != "1" -o "$1" != "2" ]
       then
           ifup $intf
-          timer=0
-          log_it "checking that $intf has IP "
-          while true
-          do
-              ip=$(ifconfig $intf | grep "inet addr:" | awk '{print $2}' | awk -F: '{print $2}')
-              if [ -z $ip ]
-              then
-                  sleep 1;
-                  #waiting for the interface to setup with ip
-                  log_it "waiting for $intf interface setup with ip timer=$timer"
-              else
-                  break
-              fi
-
-              if [ $timer -gt 15 ]
-              then
-                  log_it  "interface $intf is not set up with ip... exiting";
-                  break
-              fi
-
-              timer=`expr $timer + 1`
-          done
       fi
   fi
 }
@@ -352,24 +329,16 @@ setup_common() {
     fi
 
     ip route add default via $GW dev $gwdev
-
   fi
 
   # a hacking way to activate vSwitch under VMware
   ping -n -c 3 $GW &
-  sleep 3
-  pkill ping
   if [ -n "$MGMTNET"  -a -n "$LOCAL_GW" ]
   then
       ping -n -c 3 $LOCAL_GW &
-      sleep 3
-      pkill ping
       #This code is added to address ARP issue by pinging MGMT_GW
       MGMT_GW=$(echo $MGMTNET | awk -F "." '{print $1"."$2"."$3".1"}')
       ping -n -c 3 $MGMT_GW &
-      sleep 3
-      pkill ping
-
   fi
 
   if [ "$HYPERVISOR" == "vmware" ]; then
@@ -503,7 +472,6 @@ setup_sshd(){
   [ -f /etc/ssh/sshd_config ] && sed -i -e "s/^[#]*ListenAddress.*$/ListenAddress $ip/" /etc/ssh/sshd_config
   sed -i "/3922/s/eth./$eth/" /etc/iptables/rules.v4
   sed -i "/3922/s/eth./$eth/" /etc/iptables/rules
-  systemctl restart sshd
 }
 
 setup_vpc_apache2() {
@@ -611,7 +579,7 @@ setup_ntp() {
             fi
             sed -i "0,/^server/s//$PATTERN\nserver/" $NTP_CONF_FILE
         done
-        systemctl restart ntp
+        systemctl enable ntp
     else
         log_it "NTP configuration file not found"
     fi
