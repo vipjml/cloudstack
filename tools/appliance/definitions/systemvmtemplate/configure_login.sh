@@ -62,6 +62,8 @@ function configure_inittab() {
   # Fix inittab
   cat >> /etc/inittab << EOF
 
+1:2345:respawn:/sbin/getty 38400 tty1
+
 vc:2345:respawn:/sbin/getty 38400 hvc0
 EOF
 }

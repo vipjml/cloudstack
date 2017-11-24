@@ -20,7 +20,7 @@ set -e
 set -x
 
 function cleanup_apt() {
-  apt-get -y remove dictionaries-common busybox
+  apt-get -y remove dictionaries-common busybox isc-dhcp-client isc-dhcp-common
   apt-get -y autoremove
   apt-get autoclean
   apt-get clean
@@ -40,10 +40,13 @@ function cleanup_dev() {
 }
 
 function cleanup_misc() {
-  rm -fr /var/log/*
   rm -fr /home/cloud/cloud_scripts*
   rm -f /root/.rnd
   rm -f /var/www/html/index.html
+  rm -f /var/log/*.log
+  rm -f /var/log/apache2/*
+  rm -f /var/log/messages
+  rm -f /var/log/syslog
 }
 
 function cleanup() {

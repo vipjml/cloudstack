@@ -41,9 +41,14 @@ function install_cloud_scripts() {
 
   cat > /etc/systemd/system/cloud-early-config.service << EOF
 [Unit]
-Description=cloud-early-config: configure according to cmdline
+Description=cloud-early-config: configures systemvm using cmdline
 DefaultDependencies=no
-After=local-fs.target apparmor.service systemd-sysctl.service systemd-modules-load.service
+
+Before=network-pre.target
+Wants=network-pre.target
+
+Requires=local-fs.target
+After=local-fs.target
 
 [Install]
 WantedBy=multi-user.target
@@ -142,17 +147,17 @@ function configure_services() {
   systemctl daemon-reload
   systemctl disable apt-daily.service
   systemctl disable apt-daily.timer
-  systemctl disable xl2tpd
 
   # Disable services that slow down boot and are not used anyway
-  systemctl disable x11-common
-  systemctl disable console-setup
-  systemctl disable haproxy
   systemctl disable apache2
+  systemctl disable conntrackd
+  systemctl disable console-setup
   systemctl disable dnsmasq
-  systemctl disable strongswan
-
+  systemctl disable haproxy
   systemctl disable radvd
+  systemctl disable strongswan
+  systemctl disable x11-common
+  systemctl disable xl2tpd
 
   configure_apache2
   configure_strongswan
